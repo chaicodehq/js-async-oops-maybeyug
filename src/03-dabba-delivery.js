@@ -77,29 +77,113 @@
 export class DabbaService {
   constructor(serviceName, area) {
     // Your code here
+    this.serviceName = serviceName;
+    this.area = area;
+    this.customers = [];
+    this._nextId = 1;
   }
 
   addCustomer(name, address, mealPreference) {
     // Your code here
+    if (
+      !(
+        mealPreference === "veg" ||
+        mealPreference === "nonveg" ||
+        mealPreference === "jain"
+      )
+    )
+      return null;
+    const isExist = this.customers.find((item) => item.name === name);
+    if (isExist) return null;
+    const customerObj = {
+      id: this._nextId++,
+      name,
+      address,
+      mealPreference,
+      active: true,
+      delivered: false,
+    };
+    this.customers.push(customerObj);
+    return customerObj;
   }
 
   removeCustomer(name) {
     // Your code here
+    const customer = this.customers.find(
+      (c) => c.name === name && c.active === true,
+    );
+    if (!customer) return false;
+
+    customer.active = false;
+    return true;
   }
 
   createDeliveryBatch() {
     // Your code here
+    const deliveryArray = [];
+    this.customers.forEach((c) => {
+      if (c.active === true) {
+        const tempObj = {};
+        c.active = false;
+        tempObj.customerId = c.id;
+        tempObj.name = c.name;
+        tempObj.address = c.address;
+        tempObj.mealPreference = c.mealPreference;
+        tempObj.batchTime = new Date().toISOString();
+        deliveryArray.push(tempObj);
+      }
+    });
+    return deliveryArray;
   }
 
   markDelivered(customerId) {
     // Your code here
+    const customer = this.customers.find(
+      (c) => c.id === customerId && c.delivered === false,
+    );
+    if (!customer) return false;
+    customer.delivered = true;
+    return true;
   }
 
   getDailyReport() {
     // Your code here
+    const activeCustomer = this.customers.filter((c) => c.active === true);
+    return activeCustomer.reduce(
+      (report, curr) => {
+        if (curr.active === true) {
+          report.totalCustomers++;
+          if (curr.delivered === true) {
+            report.delivered++;
+          } else {
+            report.pending++;
+          }
+          if (curr.mealPreference === "veg") {
+            report.mealBreakdown.veg++;
+          } else if (curr.mealPreference === "nonveg") {
+            report.mealBreakdown.nonveg++;
+          } else {
+            report.mealBreakdown.jain++;
+          }
+        }
+        return report;
+      },
+      {
+        totalCustomers: 0,
+        delivered: 0,
+        pending: 0,
+        mealBreakdown: {
+          veg: 0,
+          nonveg: 0,
+          jain: 0,
+        },
+      },
+    );
   }
 
   getCustomer(name) {
     // Your code here
+    const customer = this.customers.find((c) => c.name === name);
+    return !customer ? null : { ...customer };
   }
 }

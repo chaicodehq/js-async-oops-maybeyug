@@ -100,24 +100,124 @@
  */
 export async function checkSeatAvailability(trainNumber, date, classType) {
   // Your code here
+  return new Promise((res, rej) => {
+    setTimeout(() => {
+      //validation
+      if (!(typeof trainNumber === "string" && trainNumber.length === 5)) {
+        rej(new Error("Invalid train number! 5 digit hona chahiye."));
+      } else if (
+        !(
+          classType === "SL" ||
+          classType === "3A" ||
+          classType === "2A" ||
+          classType === "1A"
+        )
+      ) {
+        rej(new Error("Invalid class type!"));
+      } else if (typeof date !== "string" || date === "") {
+        rej(new Error("Date required hai!"));
+      }
+      const seatCount = Math.floor(Math.random() * (50 + 1));
+      res({
+        trainNumber,
+        date,
+        classType,
+        available: seatCount > 0,
+        seats: seatCount,
+        waitlist: Math.floor(Math.random() * (20 + 1)),
+      });
+    }, 100);
+  });
 }
 
 export async function bookTicket(passenger, trainNumber, date, classType) {
   // Your code here
+  const isAvailable = await checkSeatAvailability(trainNumber, date, classType);
+
+  if (isAvailable.available === true) {
+    let calFare = 0;
+    if (classType === "SL") {
+      calFare = 250;
+    } else if (classType === "3A") {
+      calFare = 800;
+    } else if (classType === "2A") {
+      calFare = 1200;
+    } else if (classType === "1A") {
+      calFare = 2000;
+    }
+    return {
+      pnr: "PNR" + Math.floor(Math.random() * 1000000),
+      passenger,
+      trainNumber,
+      date,
+      class: classType,
+      status: "confirmed",
+      fare: calFare,
+    };
+  } else {
+    return {
+      status: "waitlisted",
+      waitlistNumber: Math.ceil(Math.random() * 20),
+    };
+  }
 }
 
 export async function cancelTicket(pnr) {
   // Your code here
+  return new Promise((res, rej) => {
+    setTimeout(() => {
+      if (typeof pnr !== "string" || pnr === "" || !pnr.startsWith("PNR")) {
+        rej(new Error("Invalid PNR number!"));
+      }
+      res({
+        pnr,
+        status: "cancelled",
+        refund: Math.random() * (1000 - 100 + 1) + 100,
+      });
+    }, 50);
+  });
 }
 
 export async function getBookingStatus(pnr) {
   // Your code here
+  return new Promise((res, rej) => {
+    setTimeout(() => {
+      if (typeof pnr !== "string" || pnr === "" || !pnr.startsWith("PNR")) {
+        rej(new Error("Invalid PNR number!"));
+      }
+      const statusArray = ["confirmed", "waitlisted", "cancelled"];
+      res({
+        pnr,
+        status: statusArray[Math.floor(Math.random() * 3)],
+        lastUpdated: new Date().toISOString(),
+      });
+    }, 50);
+  });
 }
 
-export async function bookMultipleTickets(passengers, trainNumber, date, classType) {
+export async function bookMultipleTickets(
+  passengers,
+  trainNumber,
+  date,
+  classType,
+) {
   // Your code here
+  if (passengers.length === 0) return [];
+  const bookingArray = [];
+  for (let passenger of passengers) {
+    const result = await bookTicket(passenger, trainNumber, date, classType);
+    bookingArray.push(result);
+  }
+  return bookingArray;
 }
 
 export async function raceBooking(trainNumbers, passenger, date, classType) {
   // Your code here
+  const tempArray = [];
+  trainNumbers.forEach((trainNumber) => {
+    const result = bookTicket(passenger, trainNumber, date, classType);
+    tempArray.push(result);
+  });
+  return Promise.any(tempArray).then((value) => value);
+  // .catch(err => Error("Koi bhi train mein seat nahi mili!");
 }
