@@ -80,51 +80,69 @@ export function orderChai(type, quantity) {
     ginger: 15,
     masala: 25,
   };
-  if (
-    !(
-      type === "cutting" ||
-      type === "special" ||
-      type === "ginger" ||
-      type === "masala"
-    )
-  )
-    return Promise.reject(new Error("Yeh chai available nahi hai!"));
 
-  if (typeof quantity !== "number" || quantity <= 0)
-    return Promise.reject(new Error("Kitni chai chahiye bhai?"));
+  const chaiType = ["cutting","special","ginger","masala"]
 
-  return Promise.resolve({ type, quantity, total: prices[type] * quantity });
+  return new Promise((res,rej)=>{
+    if(!chaiType.includes(type))
+      rej(new Error("Yeh chai available nahi hai!"))
+    
+    else if(typeof quantity !== "number" || quantity<= 0) rej(new Error("Kitni chai chahiye bhai?"))
+    
+    else {
+      setTimeout(()=>{
+        res({
+        type,
+        quantity,
+        total: prices[type] * quantity
+      })
+      },100)
+    }
+
+  })
 }
 
 export function checkIngredients(ingredient) {
   // Your code here
-  const validIngred = ["tea", "milk", "sugar", "ginger", "cardamom"];
-  if (validIngred.includes(ingredient)) {
-    return Promise.resolve({ ingredient, available: true });
-  } else return Promise.reject(new Error(`${ingredient} khatam ho gaya!`));
+  const validIngredient = ["tea", "milk", "sugar", "ginger", "cardamom"];
+
+  return new Promise((res,rej)=>{
+    if(!validIngredient.includes(ingredient))
+      rej(new Error(`${ingredient} khatam ho gaya!`))
+    else 
+      res({ingredient,available:true})
+  })
 }
 
 export function prepareChaiWithTimeout(type, timeoutMs) {
   // Your code here
-  // const isOrder = orderChai(type, 1);
-  // const promiseTwo = new Promise((rej) => {
-  //   setTimeout(() => {
-  //     rej(new Error("Bahut der ho gayi, chai nahi bani!"));
-  //   }, timeoutMs);
-  // });
-  // return Promise.race([isOrder, promiseTwo]);
+  const promiseOne =  orderChai(type,1)
+  const promiseTwo = new Promise((_,rej)=>{
+    setTimeout(() => {
+      rej(new Error("Bahut der ho gayi, chai nahi bani!"))
+    }, timeoutMs);
+  })
+  return new Promise((res,rej)=>{
+    Promise.race([promiseOne,promiseTwo])
+    .then(result => res(result))
+    .catch(err => rej(err))
+  })
+
 }
 
 export function processChaiQueue(orders) {
-  // Your code here
-  // if (orders.length === 0) return Promise.resolve([]);
-  // return orders.map((o) => {
-  //   const isOrder = orderChai(o);
-  //   return isOrder
-  //     .then((result) => ({ status: "fulfilled", value: result }))
-  //     .catch((error) => ({
-  //       status: "rejected",
-  //       reason: error.message,
-  //     }));
-  // });
+  if(!Array.isArray(orders) || orders.length === 0)
+    return Promise.resolve([])  
+
+  const orderResult = orders.map(item => orderChai(item.type,item.quantity))
+    
+ return Promise.allSettled(orderResult)
+  .then(item => item.map(result => {
+    if(result.status === "rejected"){
+      return {
+        status : "rejected",
+        reason: result.reason.message
+      }
+  }else return result
+  }))
 }
